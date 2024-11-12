@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SchoolAPI.Data;
 using SchoolAPI.Model;
-using Microsoft.AspNetCore.JsonPatch;
 
 namespace SchoolAPI.Controllers
 {
@@ -21,15 +20,15 @@ namespace SchoolAPI.Controllers
         [HttpGet]
         public async Task<ActionResult> GetStudent(
     string? search = null,
-    string? sortBy = "Name",
+    string? sortBy = "UserName",
     string sortOrder = "asc",
     int pageNumber = 1,
     int pageSize = 10)
         {
-            // Build the query for filtering, sorting, and pagination
+            // Start with the base query, including Class and Teacher relationships
             IQueryable<Student> query = Context.Students
                 .Include(s => s.Classes)
-                .ThenInclude(c => c.Teacher); // Include both Class and Teacher information
+                .ThenInclude(c => c.Teacher);
 
             // Search filter
             if (!string.IsNullOrWhiteSpace(search))
@@ -37,7 +36,14 @@ namespace SchoolAPI.Controllers
                 query = query.Where(s => s.UserName.Contains(search));
             }
 
-            // Sorting logic
+            // Sort by specific properties, allowing only valid properties
+            var validSortByFields = new List<string> { "UserName", "Email", "Grade", "Id" };
+            if (!validSortByFields.Contains(sortBy))
+            {
+                return BadRequest($"Invalid sort field: {sortBy}. Valid fields are: {string.Join(", ", validSortByFields)}");
+            }
+
+            // Sorting logic with dynamic sorting
             query = sortOrder.ToLower() == "desc"
                 ? query.OrderByDescending(s => EF.Property<object>(s, sortBy))
                 : query.OrderBy(s => EF.Property<object>(s, sortBy));
@@ -56,8 +62,8 @@ namespace SchoolAPI.Controllers
                                           Role = s.Role.ToString(),
                                           s.Password,
                                           s.Grade,
-                                          ClassName = s.Classes.Name,
-                                          TeacherName = s.Classes.Teacher.UserName
+                                          ClassName = s.Classes != null ? s.Classes.Name : null,
+                                          TeacherName = s.Classes.Teacher != null ? s.Classes.Teacher.UserName : null
                                       })
                                       .ToListAsync();
 
@@ -76,6 +82,7 @@ namespace SchoolAPI.Controllers
             return Ok(metadata);
         }
 
+
         [HttpPost]
         public async Task<ActionResult<Student>> createStudent(Student student)
         {
@@ -83,6 +90,22 @@ namespace SchoolAPI.Controllers
             await Context.SaveChangesAsync();
             return Ok();
         }
+
+        [HttpPatch("{id}/role")]
+        public async Task<ActionResult<Student>> UpdateStudentRole(int id, [FromBody] Role newRole)
+        {
+            var student = await Context.Students.FindAsync(id);
+            if (student == null)
+            {
+                return NotFound();
+            }
+            student.Role = newRole;
+            // Mark only the Role property as modified
+            Context.Entry(student).Property(s => s.Role).IsModified = true;
+            await Context.SaveChangesAsync();
+            return Ok(student);
+        }
+
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Student>> getStudentById(int id)

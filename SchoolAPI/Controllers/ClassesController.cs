@@ -48,7 +48,6 @@ namespace SchoolAPI.Controllers
 
             _context.Classes.Add(newClass);
             await _context.SaveChangesAsync();
-
             return CreatedAtAction(nameof(GetClass), new { id = newClass.Id }, newClass);
         }
 
@@ -103,7 +102,6 @@ namespace SchoolAPI.Controllers
 
             _context.Classes.Remove(classes);
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
 

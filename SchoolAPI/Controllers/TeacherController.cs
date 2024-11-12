@@ -75,7 +75,7 @@ namespace SchoolAPI.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Teacher>> getStudentById(int id)
         {
-            var teacher = await Context.Students.FindAsync(id);
+            var teacher = await Context.Teacher.FindAsync(id);
             if (teacher == null)
             {
                 return NotFound();
@@ -88,12 +88,12 @@ namespace SchoolAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<Teacher>> deleteStudent(int id)
         {
-            var teacher = await Context.Students.FindAsync(id);
+            var teacher = await Context.Teacher.FindAsync(id);
             if (teacher == null)
             {
                 return NotFound();
             }
-            Context.Students.Remove(teacher);
+            Context.Teacher.Remove(teacher);
             await Context.SaveChangesAsync();
             return NoContent();
         }
